@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#111827">
+  <title>Calculator</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #0b1020;
+      color: #f8fafc;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      min-height: 100vh;
+      margin: 0;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+      background: radial-gradient(circle at top, #1e293b 0, #0b1020 58%);
+    }
+
+    .calculator {
+      width: min(100%, 360px);
+      padding: 22px;
+      border: 1px solid rgb(255 255 255 / 9%);
+      border-radius: 28px;
+      background: rgb(17 24 39 / 88%);
+      box-shadow: 0 28px 80px rgb(0 0 0 / 45%);
+      backdrop-filter: blur(16px);
+    }
+
+    .heading {
+      margin: 0 0 20px;
+      color: #94a3b8;
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.16em;
+      text-align: center;
+      text-transform: uppercase;
+    }
+
+    .display {
+      min-height: 112px;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      align-items: flex-end;
+      gap: 8px;
+      overflow: hidden;
+      padding: 16px 8px 22px;
+    }
+
+    .previous-operand {
+      min-height: 1.25rem;
+      max-width: 100%;
+      overflow: hidden;
+      color: #94a3b8;
+      font-size: 1rem;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .current-operand {
+      max-width: 100%;
+      overflow: hidden;
+      font-size: clamp(2.5rem, 12vw, 3.5rem);
+      font-variant-numeric: tabular-nums;
+      font-weight: 300;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .keys {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+    }
+
+    button {
+      min-height: 64px;
+      border: 0;
+      border-radius: 19px;
+      background: #263247;
+      color: #f8fafc;
+      cursor: pointer;
+      font: inherit;
+      font-size: 1.25rem;
+      font-weight: 600;
+      transition: background 140ms ease, transform 140ms ease;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    button:hover { background: #34435c; }
+    button:active { transform: scale(0.96); }
+    button:focus-visible { outline: 3px solid #a5b4fc; outline-offset: 2px; }
+
+    button.utility { background: #3a465b; color: #cbd5e1; }
+    button.operator { background: #4338ca; }
+    button.operator:hover { background: #4f46e5; }
+    button.equals { background: #818cf8; color: #111827; }
+    button.equals:hover { background: #a5b4fc; }
+    @media (max-width: 380px) {
+      .calculator { padding: 16px; border-radius: 24px; }
+      .keys { gap: 8px; }
+      button { min-height: 58px; border-radius: 16px; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { transition-duration: 0.01ms !important; }
+    }
+  </style>
+</head>
+<body>
+  <main class="calculator" aria-label="Calculator">
+    <h1 class="heading">Calculator</h1>
+    <section class="display" aria-live="polite" aria-atomic="true" aria-label="Calculator display">
+      <div class="previous-operand" id="previous-operand"></div>
+      <div class="current-operand" id="current-operand">0</div>
+    </section>
+    <section class="keys" aria-label="Calculator keys">
+      <button class="utility" data-action="clear" aria-label="Clear all">AC</button>
+      <button class="utility" data-action="delete" aria-label="Delete last digit">DEL</button>
+      <button class="utility" data-action="percent" aria-label="Percent">%</button>
+      <button class="operator" data-operation="÷" aria-label="Divide">÷</button>
+
+      <button data-number="7">7</button>
+      <button data-number="8">8</button>
+      <button data-number="9">9</button>
+      <button class="operator" data-operation="×" aria-label="Multiply">×</button>
+
+      <button data-number="4">4</button>
+      <button data-number="5">5</button>
+      <button data-number="6">6</button>
+      <button class="operator" data-operation="−" aria-label="Subtract">−</button>
+
+      <button data-number="1">1</button>
+      <button data-number="2">2</button>
+      <button data-number="3">3</button>
+      <button class="operator" data-operation="+" aria-label="Add">+</button>
+
+      <button class="utility" data-action="sign" aria-label="Change sign">+/−</button>
+      <button data-number="0">0</button>
+      <button data-action="decimal" aria-label="Decimal point">.</button>
+      <button class="equals" data-action="equals" aria-label="Equals">=</button>
+    </section>
+  </main>
+
+  <script>
+    const currentOperandElement = document.getElementById("current-operand");
+    const previousOperandElement = document.getElementById("previous-operand");
+    let currentOperand = "0";
+    let previousOperand = "";
+    let operation = null;
+    let replaceCurrent = false;
+
+    function updateDisplay() {
+      currentOperandElement.textContent = currentOperand;
+      previousOperandElement.textContent = operation
+        ? `${previousOperand} ${operation}`
+        : "";
+    }
+
+    function appendNumber(number) {
+      if (currentOperand === "Error" || replaceCurrent) {
+        currentOperand = number;
+        replaceCurrent = false;
+      } else if (currentOperand === "0") {
+        currentOperand = number;
+      } else if (currentOperand.length < 14) {
+        currentOperand += number;
+      }
+      updateDisplay();
+    }
+
+    function chooseOperation(nextOperation) {
+      if (currentOperand === "Error") return;
+      if (operation && !replaceCurrent) calculate();
+      previousOperand = currentOperand;
+      operation = nextOperation;
+      replaceCurrent = true;
+      updateDisplay();
+    }
+
+    function calculate() {
+      if (!operation || previousOperand === "") return;
+      const left = Number(previousOperand);
+      const right = Number(currentOperand);
+      let result;
+
+      switch (operation) {
+        case "+": result = left + right; break;
+        case "−": result = left - right; break;
+        case "×": result = left * right; break;
+        case "÷": result = right === 0 ? NaN : left / right; break;
+        default: return;
+      }
+
+      currentOperand = Number.isFinite(result)
+        ? String(Number(result.toPrecision(12)))
+        : "Error";
+      previousOperand = "";
+      operation = null;
+      replaceCurrent = true;
+      updateDisplay();
+    }
+
+    function handleAction(action) {
+      switch (action) {
+        case "clear":
+          currentOperand = "0";
+          previousOperand = "";
+          operation = null;
+          replaceCurrent = false;
+          break;
+        case "delete":
+          if (currentOperand === "Error" || replaceCurrent) {
+            currentOperand = "0";
+            replaceCurrent = false;
+          } else {
+            currentOperand = currentOperand.length > 1
+              ? currentOperand.slice(0, -1)
+              : "0";
+            if (currentOperand === "-") currentOperand = "0";
+          }
+          break;
+        case "decimal":
+          if (currentOperand === "Error" || replaceCurrent) {
+            currentOperand = "0.";
+            replaceCurrent = false;
+          } else if (!currentOperand.includes(".")) {
+            currentOperand += ".";
+          }
+          break;
+        case "sign":
+          if (currentOperand !== "0" && currentOperand !== "Error") {
+            currentOperand = currentOperand.startsWith("-")
+              ? currentOperand.slice(1)
+              : `-${currentOperand}`;
+          }
+          break;
+        case "percent":
+          if (currentOperand !== "Error") {
+            currentOperand = String(Number(currentOperand) / 100);
+          }
+          break;
+        case "equals":
+          calculate();
+          return;
+      }
+      updateDisplay();
+    }
+
+    document.querySelector(".keys").addEventListener("click", (event) => {
+      const button = event.target.closest("button");
+      if (!button) return;
+
+      if (button.dataset.number !== undefined) appendNumber(button.dataset.number);
+      else if (button.dataset.operation) chooseOperation(button.dataset.operation);
+      else if (button.dataset.action) handleAction(button.dataset.action);
+    });
+
+    document.addEventListener("keydown", (event) => {
+      if (/^[0-9]$/.test(event.key)) appendNumber(event.key);
+      else if (event.key === ".") handleAction("decimal");
+      else if (event.key === "Enter" || event.key === "=") handleAction("equals");
+      else if (event.key === "Backspace") handleAction("delete");
+      else if (event.key === "Escape") handleAction("clear");
+      else if (["+", "-", "*", "/"].includes(event.key)) {
+        const symbols = { "+": "+", "-": "−", "*": "×", "/": "÷" };
+        chooseOperation(symbols[event.key]);
+      }
+    });
+  </script>
+</body>
+</html>
