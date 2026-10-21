@@ -153,10 +153,15 @@
   <script>
     const currentOperandElement = document.getElementById("current-operand");
     const previousOperandElement = document.getElementById("previous-operand");
+    const DIVIDE_BY_ZERO_MESSAGE = "Cannot divide by zero";
     let currentOperand = "0";
     let previousOperand = "";
     let operation = null;
     let replaceCurrent = false;
+
+    function isError() {
+      return currentOperand === "Error" || currentOperand === DIVIDE_BY_ZERO_MESSAGE;
+    }
 
     function updateDisplay() {
       currentOperandElement.textContent = currentOperand;
@@ -166,7 +171,7 @@
     }
 
     function appendNumber(number) {
-      if (currentOperand === "Error" || replaceCurrent) {
+      if (isError() || replaceCurrent) {
         currentOperand = number;
         replaceCurrent = false;
       } else if (currentOperand === "0") {
@@ -178,7 +183,7 @@
     }
 
     function chooseOperation(nextOperation) {
-      if (currentOperand === "Error") return;
+      if (isError()) return;
       if (operation && !replaceCurrent) calculate();
       previousOperand = currentOperand;
       operation = nextOperation;
@@ -196,7 +201,17 @@
         case "+": result = left + right; break;
         case "−": result = left - right; break;
         case "×": result = left * right; break;
-        case "÷": result = right === 0 ? NaN : left / right; break;
+        case "÷":
+          if (right === 0) {
+            currentOperand = DIVIDE_BY_ZERO_MESSAGE;
+            previousOperand = "";
+            operation = null;
+            replaceCurrent = true;
+            updateDisplay();
+            return;
+          }
+          result = left / right;
+          break;
         default: return;
       }
 
@@ -218,7 +233,7 @@
           replaceCurrent = false;
           break;
         case "delete":
-          if (currentOperand === "Error" || replaceCurrent) {
+          if (isError() || replaceCurrent) {
             currentOperand = "0";
             replaceCurrent = false;
           } else {
@@ -229,7 +244,7 @@
           }
           break;
         case "decimal":
-          if (currentOperand === "Error" || replaceCurrent) {
+          if (isError() || replaceCurrent) {
             currentOperand = "0.";
             replaceCurrent = false;
           } else if (!currentOperand.includes(".")) {
@@ -237,14 +252,14 @@
           }
           break;
         case "sign":
-          if (currentOperand !== "0" && currentOperand !== "Error") {
+          if (currentOperand !== "0" && !isError()) {
             currentOperand = currentOperand.startsWith("-")
               ? currentOperand.slice(1)
               : `-${currentOperand}`;
           }
           break;
         case "percent":
-          if (currentOperand !== "Error") {
+          if (!isError()) {
             currentOperand = String(Number(currentOperand) / 100);
           }
           break;

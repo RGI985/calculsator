@@ -12,3 +12,7 @@ A lightweight, responsive calculator built with plain HTML, CSS, and JavaScript.
 ## Run
 
 Open [index.html](index.html) in any modern web browser. No installation is required.
+
+## Error handling
+
+Dividing by zero displays **“Cannot divide by zero”** instead of a generic error. Press a number or use **AC** to continue calculating.
